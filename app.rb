@@ -1,16 +1,9 @@
 require 'rack'
+require_relative 'time_formatter'
 
 class App
 
   ALLOWED_PATHS = ['/time'].freeze
-  FORMAT_METHODS_MAPPER = {
-    year: :year,
-    month: :month,
-    day: :day,
-    hour: :hour,
-    minute: :min,
-    second: :sec,
-  }
 
   def call(env)
     @env = env
@@ -32,45 +25,31 @@ class App
     query_params = Rack::Utils.parse_nested_query(@env['QUERY_STRING'])
     return respond_not_found if query_params['format'].nil?
 
+    time_formatter = TimeFormatter.new
     time_formats = query_params['format'].split(',')
-    time_parts, unknown_formats = prepare_time_parts(time_formats)
-    respond(time_parts, unknown_formats)
+    result = time_formatter.format(time_formats)
+
+    respond(result)
   end
 
-  def prepare_time_parts(time_formats)
-    time = Time.now
-    time_parts = []
-    unknown_formats = []
 
-    time_formats.each do |format|
-      method = FORMAT_METHODS_MAPPER[format.to_sym]
-      if method.nil?
-        unknown_formats << format
-      else
-        time_parts << (time.send method)
-      end
-    end
-
-    [time_parts, unknown_formats]
+  def respond(result)
+    result[:success] ? respond_success(result[:result]) : respond_error(result[:message])
   end
 
-  def respond(time_parts, unknown_formats)
-    unknown_formats.empty? ? respond_success(time_parts) : respond_error(unknown_formats)
-  end
-
-  def respond_success(time_parts)
+  def respond_success(formatted_time)
     [
         200,
         { 'Content-Type' => 'text/plain' },
-        [time_parts.join('-') << "\n"]
+        [formatted_time << "\n"]
     ]
   end
 
-  def respond_error(unknown_formats)
+  def respond_error(error_message)
     [
         400,
         { 'Content-Type' => 'text/plain' },
-        ["Unknown time format [#{unknown_formats.join(', ')}]\n"]
+        [error_message << "\n"]
     ]
   end
 end
