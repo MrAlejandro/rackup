@@ -1,11 +1,11 @@
 class TimeFormatter
-  FORMAT_METHODS_MAPPER = {
-      year: :year,
-      month: :month,
-      day: :day,
-      hour: :hour,
-      minute: :min,
-      second: :sec,
+  FORMATS_MAPPER = {
+      year: '%Y',
+      month: '%m',
+      day: '%d',
+      hour: '%H',
+      minute: '%M',
+      second: '%S',
   }
 
   def format(time_formats)
@@ -14,26 +14,25 @@ class TimeFormatter
   end
 
   def prepare_time_parts(time_formats)
-    time = Time.now
-    time_parts = []
+    formats = []
     unknown_formats = []
 
     time_formats.each do |format|
-      method = FORMAT_METHODS_MAPPER[format.to_sym]
-      if method.nil?
+      format = FORMATS_MAPPER[format.to_sym]
+      if format.nil?
         unknown_formats << format
       else
-        time_parts << (time.send method)
+        formats << format
       end
     end
 
-    [time_parts, unknown_formats]
+    [formats, unknown_formats]
   end
 
-  def successful_result(time_parts)
+  def successful_result(formats)
     {
       success: true,
-      result: time_parts.join('-'),
+      result: Time.now.strftime(formats.join('-')),
     }
   end
 

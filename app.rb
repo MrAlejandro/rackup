@@ -2,28 +2,32 @@ require 'rack'
 require_relative 'time_formatter'
 
 class App
+  ERROR_NOT_FOUND = 400
+  ERROR_BAD_REQUEST = 400
 
-  ALLOWED_PATHS = ['/time'].freeze
+  PATHS_HANDLERS = {
+    '/time' => :handle_time_request,
+  }
 
   def call(env)
-    @env = env
-    return respond_not_found unless allowed_path?
-    handle_request
+    @request = Rack::Request.new(env)
+    return respond_with_error(ERROR_NOT_FOUND) unless allowed_path?
+    send PATHS_HANDLERS[@request.path]
   end
 
   private
 
   def allowed_path?
-    ALLOWED_PATHS.include?(@env['REQUEST_PATH'])
+    !PATHS_HANDLERS[@request.path].nil?
   end
 
-  def respond_not_found
-    [404, {}, []]
+  def respond_with_error(error_code)
+    [error_code, {}, []]
   end
 
-  def handle_request
-    query_params = Rack::Utils.parse_nested_query(@env['QUERY_STRING'])
-    return respond_not_found if query_params['format'].nil?
+  def handle_time_request
+    query_params = @request.params
+    return respond_with_error(ERROR_BAD_REQUEST) if query_params['format'].nil?
 
     time_formatter = TimeFormatter.new
     time_formats = query_params['format'].split(',')
